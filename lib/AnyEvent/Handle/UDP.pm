@@ -167,8 +167,8 @@ sub _error {
 }
 
 sub push_send {
-	my ($self, $message, $to) = @_;
-	my $cv = AnyEvent::CondVar->new;
+	my ($self, $message, $to, $cv) = @_;
+	$cv ||= defined wantarray ? AnyEvent::CondVar->new : undef;
 	if (!$self->{writer}) {
 		my $ret = $self->_send($message, $to, $cv);
 		$self->_push_writer($message, $to, $cv) if not defined $ret and ($! == EAGAIN or $! == EWOULDBLOCK);
@@ -184,7 +184,7 @@ sub _send {
 	my ($self, $message, $to, $cv) = @_;
 	my $ret = defined $to ? send $self->{fh}, $message, 0, $to : send $self->{fh}, $message, 0;
 	$self->on_error->($self->{fh}, 1, "$!") if not defined $ret and ($! != EAGAIN and $! != EWOULDBLOCK);
-	$cv->($ret) if defined $ret;
+	$cv->($ret) if defined $cv and defined $ret;
 	return $ret;
 }
 
@@ -276,9 +276,9 @@ Bind to the specified addres. Note that a bound socket may be rebound to another
 
 Connect to the specified address. Note that a connected socket may be reconnected to another address. C<$address> must be in the same form as the connect argument to new.
 
-=method push_send($message, $to?)
+=method push_send($message, $to = undef, $cv = AnyEvent::CondVar->new)
 
-Try to send a message. If a socket is not connected a receptient address must also be given. If it is connected giving a receptient may not work as expected, depending on your platform.
+Try to send a message. If a socket is not connected a receptient address must also be given. If it is connected giving a receptient may not work as expected, depending on your platform. It returns C<$cv>, which will become true when C<$message> is sent.
 
 =method destroy
 
