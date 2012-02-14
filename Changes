@@ -1,6 +1,7 @@
 Revision history for AnyEvent-Handle-UDP
 
 {{$NEXT}}
+          Made on_drain more consistent
 
 0.032     2012-02-14 02:13:50 Europe/Amsterdam
           Make push_send actually work

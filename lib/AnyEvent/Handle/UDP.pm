@@ -40,6 +40,7 @@ sub BUILD {
 	my $self = shift;
 	$self->bind_to($self->_bind_addr) if $self->_has_bind_addr;
 	$self->connect_to($self->_connect_addr) if $self->_has_connect_addr;
+	$self->_drained;
 	return;
 }
 
@@ -52,10 +53,19 @@ has on_recv => (
 has on_drain => (
 	is => 'rw',
 	isa => sub { reftype($_[0]) eq 'CODE' },
-	default => sub {
-		return sub {};
+	required => 0,
+	predicate => '_has_on_drain',
+	clearer => 'clear_on_drain',
+	trigger => sub {
+		my ($self, $callback) = @_;
+		$self->_drained if not @{ $self->{buffers} };
 	},
 );
+
+sub _drained {
+	my $self = shift;
+	$self->on_drain->($self) if $self->_has_on_drain
+}
 
 has on_error => (
 	is => 'rw',
@@ -162,7 +172,7 @@ sub push_send {
 	if (!$self->{writer}) {
 		my $ret = $self->_send($message, $to, $cv);
 		$self->_push_writer($message, $to, $cv) if not defined $ret and ($! == EAGAIN or $! == EWOULDBLOCK);
-		$self->on_drain->($self) if $ret;
+		$self->_drained if $ret;
 	}
 	else {
 		$self->_push_writer($message, $to, $cv);
@@ -182,7 +192,7 @@ sub _push_writer {
 	my ($self, $message, $to, $condvar) = @_;
 	push @{$self->{buffers}}, [ $message, $to, $condvar ];
 	$self->{writer} ||= AE::io $self->{fh}, 1, sub {
-		if (@{$self->{buffers}}) {
+		if (@{ $self->{buffers} }) {
 			while (my ($msg, $to, $cv) = shift @{$self->{buffers}}) {
 				my $ret = $self->_send(@{$msg}, $to, $cv);
 				if (not defined $ret) {
@@ -194,7 +204,7 @@ sub _push_writer {
 		}
 		else {
 			delete $self->{writer};
-			$self->on_drain->($self);
+			$self->_drained;
 		}
 	};
 	return $condvar;
