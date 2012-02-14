@@ -208,9 +208,9 @@ sub destroy {
 
 1;
 
-__END__
-
 # ABSTRACT: client/server UDP handles for AnyEvent
+
+__END__
 
 =head1 DESCRIPTION
 
@@ -268,7 +268,7 @@ Connect to the specified address. Note that a connected socket may be reconnecte
 
 =method push_send($message, $to?)
 
-Try to send a message. If a socket is not connected a receptient address must also be given. It is connected giving a receptient may not work as expected, depending on your platform.
+Try to send a message. If a socket is not connected a receptient address must also be given. If it is connected giving a receptient may not work as expected, depending on your platform.
 
 =method destroy
 
