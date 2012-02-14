@@ -49,6 +49,14 @@ has on_recv => (
 	required => 1,
 );
 
+has on_drain => (
+	is => 'rw',
+	isa => sub { reftype($_[0]) eq 'CODE' },
+	default => sub {
+		return sub {};
+	},
+);
+
 has on_error => (
 	is => 'rw',
 	isa => sub { reftype($_[0]) eq 'CODE' },
@@ -150,35 +158,46 @@ sub _error {
 
 sub push_send {
 	my ($self, $message, $to) = @_;
-	my $ret = $self->_send();
-	$self->_push_writer($message, $to) if not defined $ret and ($! == EAGAIN or $! == EWOULDBLOCK);
-	return;
+	my $cv = AnyEvent::CondVar->new;
+	if (!$self->{writer}) {
+		my $ret = $self->_send($message, $to, $cv);
+		$self->_push_writer($message, $to, $cv) if not defined $ret and ($! == EAGAIN or $! == EWOULDBLOCK);
+		$self->on_drain->($self) if $ret;
+	}
+	else {
+		$self->_push_writer($message, $to, $cv);
+	}
+	return $cv;
 }
 
 sub _send {
-	my ($self, $message, $to) = @_;
+	my ($self, $message, $to, $cv) = @_;
 	my $ret = defined $to ? send $self->{fh}, $message, 0, $to : send $self->{fh}, $message, 0;
 	$self->on_error->($self->{fh}, 1, "$!") if not defined $ret and ($! != EAGAIN and $! != EWOULDBLOCK);
+	$cv->($ret) if defined $ret;
 	return $ret;
 }
 
 sub _push_writer {
-	my ($self, $message, $to) = @_;
-	push @{$self->{buffers}}, [ $message, $to ];
+	my ($self, $message, $to, $condvar) = @_;
+	push @{$self->{buffers}}, [ $message, $to, $condvar ];
 	$self->{writer} ||= AE::io $self->{fh}, 1, sub {
 		if (@{$self->{buffers}}) {
-			while (my $msg = shift @{$self->{buffers}}) {
-				if (not defined $self->_send(@{$msg})) {
+			while (my ($msg, $to, $cv) = shift @{$self->{buffers}}) {
+				my $ret = $self->_send(@{$msg}, $to, $cv);
+				if (not defined $ret) {
 					unshift @{$self->{buffers}}, $msg;
+					$self->on_error->($self->{fh}, 1, "$!") if $! != EAGAIN and $! != EWOULDBLOCK;
 					last;
 				}
 			}
 		}
 		else {
 			delete $self->{writer};
+			$self->on_drain->($self);
 		}
 	};
-	return;
+	return $condvar;
 }
 
 sub destroy {
@@ -222,6 +241,10 @@ The callback for when a package arrives. It takes three arguments: the datagram,
 =attr on_error
 
 The callback for when an error occurs. It takes three arguments: the handle, a boolean indicating the error is fatal or not, and the error message.
+
+=attr on_drain
+
+This sets the callback that is called when the send buffer becomes empty. The callback takes the handle as its only argument.
 
 =attr receive_size
 

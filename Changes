@@ -1,6 +1,7 @@
 Revision history for AnyEvent-Handle-UDP
 
 {{$NEXT}}
+          Make push_send actually work
 
 0.031     2011-10-14 19:48:19 Europe/Amsterdam
           Updated version number
