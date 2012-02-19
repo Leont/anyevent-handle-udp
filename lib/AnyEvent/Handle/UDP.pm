@@ -195,10 +195,11 @@ sub _push_writer {
 	push @{$self->{buffers}}, [ $message, $to, $condvar ];
 	$self->{writer} ||= AE::io $self->{fh}, 1, sub {
 		if (@{ $self->{buffers} }) {
-			while (my ($msg, $to, $cv) = shift @{$self->{buffers}}) {
-				my $ret = $self->_send(@{$msg}, $to, $cv);
+			while (my $entry = shift @{$self->{buffers}}) {
+				my ($msg, $to, $cv) = @{$entry};
+				my $ret = $self->_send($msg, $to, $cv);
 				if (not defined $ret) {
-					unshift @{$self->{buffers}}, $msg;
+					unshift @{$self->{buffers}}, $entry;
 					$self->on_error->($self->{fh}, 1, "$!") if !$non_fatal{$! + 0};
 					last;
 				}

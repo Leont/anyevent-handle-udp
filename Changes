@@ -2,6 +2,7 @@ Revision history for AnyEvent-Handle-UDP
 
 {{$NEXT}}
           Make push_send optionally take a $cv, and only return one if called in non-void context
+          Make resend logica actually work at all
           Made on_drain more consistent
 
 0.032     2012-02-14 02:13:50 Europe/Amsterdam
