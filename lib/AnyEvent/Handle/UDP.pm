@@ -90,6 +90,11 @@ has _full => (
 	predicate => '_has_full',
 );
 
+has autoflush => (
+	is => 'rw',
+	default => sub { 0 },
+);
+
 sub bind_to {
 	my ($self, $addr) = @_;
 	if (ref $addr) {
@@ -171,7 +176,7 @@ my %non_fatal = map { ( $_ => 1 ) } EAGAIN, EWOULDBLOCK, EINTR;
 sub push_send {
 	my ($self, $message, $to, $cv) = @_;
 	$cv ||= defined wantarray ? AnyEvent::CondVar->new : undef;
-	if (!$self->{writer}) {
+	if ($self->autoflush and ! @{ $self->{buffers} }) {
 		my $ret = $self->_send($message, $to, $cv);
 		$self->_push_writer($message, $to, $cv) if not defined $ret and $non_fatal{$! + 0};
 		$self->_drained if $ret;
@@ -258,6 +263,10 @@ The callback for when an error occurs. It takes three arguments: the handle, a b
 =attr on_drain
 
 This sets the callback that is called when the send buffer becomes empty. The callback takes the handle as its only argument.
+
+=attr autoflush
+
+Always attempt to send data to the operating system immediately, without waiting for the loop to indicate the filehandle is write-ready.
 
 =attr receive_size
 

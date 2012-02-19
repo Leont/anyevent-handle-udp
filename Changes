@@ -4,6 +4,7 @@ Revision history for AnyEvent-Handle-UDP
           Make push_send optionally take a $cv, and only return one if called in non-void context
           Make resend logica actually work at all
           Made on_drain more consistent
+          Add autoflush attribute, but no longer autocork by default
 
 0.032     2012-02-14 02:13:50 Europe/Amsterdam
           Make push_send actually work
