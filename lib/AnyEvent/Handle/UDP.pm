@@ -10,7 +10,7 @@ use AnyEvent::Socket qw//;
 
 use Carp qw/croak/;
 use Const::Fast qw/const/;
-use Errno qw/EAGAIN EWOULDBLOCK/;
+use Errno qw/EAGAIN EWOULDBLOCK EINTR/;
 use Scalar::Util qw/reftype looks_like_number/;
 use Socket qw/SOL_SOCKET SO_REUSEADDR SOCK_DGRAM/;
 use Symbol qw/gensym/;
@@ -166,12 +166,14 @@ sub _error {
 	return;
 }
 
+my %non_fatal = map { ( $_ => 1 ) } EAGAIN, EWOULDBLOCK, EINTR;
+
 sub push_send {
 	my ($self, $message, $to, $cv) = @_;
 	$cv ||= defined wantarray ? AnyEvent::CondVar->new : undef;
 	if (!$self->{writer}) {
 		my $ret = $self->_send($message, $to, $cv);
-		$self->_push_writer($message, $to, $cv) if not defined $ret and ($! == EAGAIN or $! == EWOULDBLOCK);
+		$self->_push_writer($message, $to, $cv) if not defined $ret and $non_fatal{$! + 0};
 		$self->_drained if $ret;
 	}
 	else {
@@ -183,7 +185,7 @@ sub push_send {
 sub _send {
 	my ($self, $message, $to, $cv) = @_;
 	my $ret = defined $to ? send $self->{fh}, $message, 0, $to : send $self->{fh}, $message, 0;
-	$self->on_error->($self->{fh}, 1, "$!") if not defined $ret and ($! != EAGAIN and $! != EWOULDBLOCK);
+	$self->on_error->($self->{fh}, 1, "$!") if not defined $ret and !$non_fatal{$! + 0};
 	$cv->($ret) if defined $cv and defined $ret;
 	return $ret;
 }
@@ -197,7 +199,7 @@ sub _push_writer {
 				my $ret = $self->_send(@{$msg}, $to, $cv);
 				if (not defined $ret) {
 					unshift @{$self->{buffers}}, $msg;
-					$self->on_error->($self->{fh}, 1, "$!") if $! != EAGAIN and $! != EWOULDBLOCK;
+					$self->on_error->($self->{fh}, 1, "$!") if !$non_fatal{$! + 0};
 					last;
 				}
 			}
