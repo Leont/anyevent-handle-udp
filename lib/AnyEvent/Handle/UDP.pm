@@ -175,6 +175,7 @@ my %non_fatal = map { ( $_ => 1 ) } EAGAIN, EWOULDBLOCK, EINTR;
 
 sub push_send {
 	my ($self, $message, $to, $cv) = @_;
+	$to = AnyEvent::Socket::pack_sockaddr($to->[0], AnyEvent::Socket::parse_address($to->[1])) if ref $to;
 	$cv ||= defined wantarray ? AnyEvent::CondVar->new : undef;
 	if ($self->autoflush and ! @{ $self->{buffers} }) {
 		my $ret = $self->_send($message, $to, $cv);
