@@ -2,6 +2,7 @@ Revision history for AnyEvent-Handle-UDP
 
 {{$NEXT}}
           Make push_send accept an address array too
+          Make sure buffers is predefined
 
 0.033     2012-02-19 17:35:10 Europe/Amsterdam
           Make push_send optionally take a $cv, and only return one if called in non-void context

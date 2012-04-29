@@ -40,6 +40,7 @@ sub BUILD {
 	my $self = shift;
 	$self->bind_to($self->_bind_addr) if $self->_has_bind_addr;
 	$self->connect_to($self->_connect_addr) if $self->_has_connect_addr;
+	$self->{buffers} = [];
 	$self->_drained;
 	return;
 }
@@ -134,7 +135,7 @@ sub _on_addr {
 			my ($domain, $type, $proto, $sockaddr) = @{$target};
 			my $full = join ':', $domain, $type, $proto;
 			if ($self->_has_full) {
-				return redo if $self->_full ne $full;
+				redo if $self->_full ne $full;
 			}
 			else {
 				socket $self->fh, $domain, $type, $proto or redo;
