@@ -6,13 +6,13 @@ use Moo;
 
 use AnyEvent qw//;
 use AnyEvent::Util qw/fh_nonblocking/;
-use AnyEvent::Socket qw//;
+use AnyEvent::Socket qw/parse_address/;
 
 use Carp qw/croak/;
 use Const::Fast qw/const/;
 use Errno qw/EAGAIN EWOULDBLOCK EINTR/;
 use Scalar::Util qw/reftype looks_like_number/;
-use Socket qw/SOL_SOCKET SO_REUSEADDR SOCK_DGRAM/;
+use Socket qw/SOL_SOCKET SO_REUSEADDR SOCK_DGRAM INADDR_ANY/;
 use Symbol qw/gensym/;
 
 use namespace::clean;
@@ -176,7 +176,7 @@ my %non_fatal = map { ( $_ => 1 ) } EAGAIN, EWOULDBLOCK, EINTR;
 
 sub push_send {
 	my ($self, $message, $to, $cv) = @_;
-	$to = AnyEvent::Socket::pack_sockaddr($to->[0], AnyEvent::Socket::parse_address($to->[1])) if ref $to;
+	$to = AnyEvent::Socket::pack_sockaddr($to->[1], defined $to->[0] ? parse_address($to->[0]) : INADDR_ANY) if ref $to;
 	$cv ||= defined wantarray ? AnyEvent::CondVar->new : undef;
 	if ($self->autoflush and ! @{ $self->{buffers} }) {
 		my $ret = $self->_send($message, $to, $cv);
@@ -192,7 +192,7 @@ sub push_send {
 sub _send {
 	my ($self, $message, $to, $cv) = @_;
 	my $ret = defined $to ? send $self->{fh}, $message, 0, $to : send $self->{fh}, $message, 0;
-	$self->on_error->($self->{fh}, 1, "$!") if not defined $ret and !$non_fatal{$! + 0};
+	$self->_error(1, "$!") if not defined $ret and !$non_fatal{$! + 0};
 	$cv->($ret) if defined $cv and defined $ret;
 	return $ret;
 }
