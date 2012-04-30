@@ -2,6 +2,7 @@ Revision history for AnyEvent-Handle-UDP
 
 {{$NEXT}}
           Make push_send accept an address array too
+          Added support for timeouts
           Make sure buffers is predefined
 
 0.033     2012-02-19 17:35:10 Europe/Amsterdam
