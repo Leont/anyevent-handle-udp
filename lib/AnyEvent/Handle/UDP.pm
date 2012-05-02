@@ -409,7 +409,7 @@ Destroy the handle.
 
 =head1 BACKWARDS COMPATIBILITY
 
-This module is B<not> backwards compatible in any way with the previous module of the same name by Jan Henning Thorsen. That module was broken by AnyEvent itself and now considered defunct.
+This module is B<not> backwards compatible in any way with the defunct previous module of the same name by Jan Henning Thorsen. 
 
 =for Pod::Coverage
 BUILD
