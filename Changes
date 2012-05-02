@@ -1,6 +1,8 @@
 Revision history for AnyEvent-Handle-UDP
 
 {{$NEXT}}
+
+0.035     2012-05-02 23:15:17 Europe/Amsterdam
           Make dependency on Sub::Name optional
           Stop depending on Const::Fast
 
