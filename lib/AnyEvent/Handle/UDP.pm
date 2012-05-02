@@ -12,9 +12,11 @@ use Carp qw/croak/;
 use Errno qw/EAGAIN EWOULDBLOCK EINTR ETIMEDOUT/;
 use Scalar::Util qw/reftype looks_like_number weaken/;
 use Socket qw/SOL_SOCKET SO_REUSEADDR SOCK_DGRAM INADDR_ANY/;
-use Sub::Name;
 use Symbol qw/gensym/;
 
+BEGIN {
+	*subname = eval { require Sub::Name } ? \&Sub::Name::subname : sub { $_[1] };
+}
 use namespace::clean;
 
 has fh => (
