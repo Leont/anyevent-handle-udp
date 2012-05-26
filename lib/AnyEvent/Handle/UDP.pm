@@ -21,7 +21,7 @@ use namespace::clean;
 
 has fh => (
 	is => 'ro',
-	default => sub { gensym() },
+	default => sub { bless gensym(), 'IO::Socket' },
 );
 
 has _bind_addr => (
