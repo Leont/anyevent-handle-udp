@@ -22,6 +22,7 @@ use namespace::clean;
 has fh => (
 	is => 'ro',
 	default => sub { bless gensym(), 'IO::Socket' },
+	handles => [ qw/sockname peername/ ],
 );
 
 has _bind_addr => (
@@ -401,6 +402,14 @@ Try to send a message. If a socket is not connected a receptient address must al
 =method wtimeout_reset
 
 Reset the activity timeout, as if data was received or sent.
+
+=method sockname
+
+Get the local address, per C<getsockname>.
+
+=method peername
+
+Get the peer's address, per C<getpeername>.
 
 =method destroy
 
