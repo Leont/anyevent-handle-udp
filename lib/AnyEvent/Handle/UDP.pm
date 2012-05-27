@@ -217,21 +217,26 @@ sub _on_addr {
 			}
 
 			$on_success->($sockaddr);
-
-			$self->{reader} = AE::io $self->fh, 0, sub {
-				while (defined (my $addr = recv $self->fh, my ($buffer), $self->{receive_size}, 0)) {
-					$self->timeout_reset;
-					$self->rtimeout_reset;
-					$self->on_recv->($buffer, $self, $addr);
-				}
-				$self->_error(1, "Couldn't recv: $!") if $! != EAGAIN and $! != EWOULDBLOCK;
-				return;
-			};
+			$self->_add_watcher;
 
 			last;
 		}
 	});
 	return;
+}
+
+sub _add_watcher {
+	my $self = shift;
+
+	$self->{reader} = AE::io $self->fh, 0, sub {
+		while (defined (my $addr = recv $self->fh, my ($buffer), $self->{receive_size}, 0)) {
+			$self->timeout_reset;
+			$self->rtimeout_reset;
+			$self->on_recv->($buffer, $self, $addr);
+		}
+		$self->_error(1, "Couldn't recv: $!") if $! != EAGAIN and $! != EWOULDBLOCK;
+		return;
+	};
 }
 
 sub _error {
