@@ -25,8 +25,7 @@ alarm 3;
 		is($message, "Hello", "received \"Hello\"");
 		$handle->push_send("World", $client_addr);
 	});
-	my $port = (unpack_sockaddr_in($server->sockname))[0];
-	my $client = AnyEvent::Handle::UDP->new(connect => [ localhost => $port ], on_recv => $cb);
+	my $client = AnyEvent::Handle::UDP->new(connect => $server->sockname, on_recv => $cb);
 	$client->push_send("Hello");
 	is($cb->recv, "World", 'received "World"');
 }

@@ -14,6 +14,7 @@ alarm 12;
 	my $cb = AE::cv;
 	my $cb2 = AE::cv;
 	my $server = AnyEvent::Handle::UDP->new(
+		bind => [ localhost => 0 ],
 		on_recv => $cb, 
 		timeout => 3,    on_timeout => sub { $cb->croak("Timeout") },
 		rtimeout => 4.5, on_rtimeout => sub { $cb2->croak("Read Timeout") }
