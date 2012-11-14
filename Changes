@@ -1,6 +1,7 @@
 Revision history for AnyEvent-Handle-UDP
 
 {{$NEXT}}
+          Handle absence of IPv6 better (hopefully)
 
 0.036     2012-06-06 19:23:18 Europe/Amsterdam
           Make fh an IO::Socket object

@@ -11,7 +11,8 @@ use AnyEvent::Socket qw/parse_address/;
 use Carp qw/croak/;
 use Errno qw/EAGAIN EWOULDBLOCK EINTR ETIMEDOUT/;
 use Scalar::Util qw/reftype looks_like_number weaken openhandle/;
-use Socket qw/SOL_SOCKET SO_REUSEADDR SOCK_DGRAM INADDR_ANY AF_INET AF_INET6 sockaddr_family/;
+use Socket qw/SOL_SOCKET SO_REUSEADDR SOCK_DGRAM INADDR_ANY AF_INET sockaddr_family/;
+BEGIN { *AF_INET6 = defined &Socket::AF_INET6 ? \&Socket::AF_INET6 : sub () { -1 } }
 use Symbol qw/gensym/;
 
 BEGIN {
@@ -283,7 +284,7 @@ my %non_fatal = map { ( $_ => 1 ) } EAGAIN, EWOULDBLOCK, EINTR;
 sub push_send {
 	my ($self, $message, $to, $cv) = @_;
 	$to = AnyEvent::Socket::pack_sockaddr($to->[1], defined $to->[0] ? parse_address($to->[0]) : INADDR_ANY) if ref $to;
-	$cv ||= defined wantarray ? AnyEvent::CondVar->new : undef;
+	$cv ||= AnyEvent::CondVar->new if defined wantarray;
 	if ($self->autoflush and ! @{ $self->_buffers }) {
 		my $ret = $self->_send($message, $to, $cv);
 		$self->_push_writer($message, $to, $cv) if not defined $ret and $non_fatal{$! + 0};
