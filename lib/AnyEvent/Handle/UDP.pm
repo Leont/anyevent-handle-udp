@@ -340,8 +340,6 @@ sub destroy {
 
 # ABSTRACT: client/server UDP handles for AnyEvent
 
-__END__
-
 =head1 DESCRIPTION
 
 This module is an abstraction around UDP sockets for use with AnyEvent.
