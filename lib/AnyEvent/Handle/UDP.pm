@@ -11,8 +11,7 @@ use AnyEvent::Socket qw/parse_address/;
 use Carp qw/croak/;
 use Errno qw/EAGAIN EWOULDBLOCK EINTR ETIMEDOUT/;
 use Scalar::Util qw/reftype looks_like_number weaken openhandle/;
-use Socket qw/SOL_SOCKET SO_REUSEADDR SOCK_DGRAM INADDR_ANY AF_INET sockaddr_family/;
-BEGIN { *AF_INET6 = defined &Socket::AF_INET6 ? \&Socket::AF_INET6 : sub () { -1 } }
+use Socket qw/SOL_SOCKET SO_REUSEADDR SOCK_DGRAM INADDR_ANY AF_INET AF_INET6 sockaddr_family/;
 use Symbol qw/gensym/;
 
 BEGIN {
@@ -249,7 +248,7 @@ sub _get_family {
 	my $fh = shift;
 	return if !openhandle($fh) || !getsockname $fh;
 	my $family = sockaddr_family(getsockname $fh);
-	return $family == AF_INET ? 4 : $family == AF_INET6 ? 6 : 0;
+	return +($family == AF_INET) ? 4 : $family == AF_INET6 ? 6 : 0;
 }
 
 sub _on_addr {
