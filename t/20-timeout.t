@@ -25,6 +25,11 @@ alarm 12;
 	cmp_ok AE::now, '>=', $start_time + 3, 'Three seconds have passed';
 	throws_ok { $cb2->recv } qr/Read Timeout/, 'Receive throws a timeout again';
 	cmp_ok AE::now, '>=', $start_time + 4.5, '1.5 more seconds have passed';
+	$server->timeout_reset;
+	my $cb3 = AE::cv;
+	$server->on_timeout(sub { $cb3->croak('Reset') });
+	throws_ok { $cb3->recv } qr/Reset/, 'Receive throws a timeout again';
+	cmp_ok AE::now, '>=', $start_time + 7.5, '3 more seconds have passed';
 }
 
 done_testing;

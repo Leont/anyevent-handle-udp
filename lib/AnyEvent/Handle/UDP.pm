@@ -188,9 +188,10 @@ for my $dir ('', 'r', 'w') {
 		isa => sub { ref($_[0]) eq 'CODE' },
 	);
 	no strict 'refs';
-	*{$timeout_reset} = subname $timeout_reset, sub {
-		$activity = AE::now;
-	};
+	*{$timeout_reset} = subname($timeout_reset, sub {
+		my $self = shift;
+		$self->$activity(AE::now);
+	});
 }
 
 sub bind_to {
