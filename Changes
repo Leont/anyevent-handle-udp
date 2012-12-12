@@ -1,6 +1,8 @@
 Revision history for AnyEvent-Handle-UDP
 
 {{$NEXT}}
+
+0.038     2012-12-12 23:19:16 Europe/Amsterdam
           Fix {,r,w}timeout_reset to actually work
           Made it work with old perl+old Socket.pm
           Switch from Test::Exception to Test::Fatal
