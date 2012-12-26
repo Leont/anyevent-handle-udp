@@ -1,6 +1,7 @@
 Revision history for AnyEvent-Handle-UDP
 
 {{$NEXT}}
+          Hopefully really fixed for old perl+old Socket.pm
 
 0.038     2012-12-12 23:19:16 Europe/Amsterdam
           Fix {,r,w}timeout_reset to actually work

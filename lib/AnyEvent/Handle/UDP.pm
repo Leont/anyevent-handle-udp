@@ -249,7 +249,7 @@ sub _get_family {
 	my $fh = shift;
 	return if !openhandle($fh) || !getsockname $fh;
 	my $family = sockaddr_family(getsockname $fh);
-	return +($family == AF_INET) ? 4 : $family == AF_INET6 ? 6 : 0;
+	return +($family == AF_INET) ? 4 : ($family == AF_INET6) ? 6 : 0;
 }
 
 sub _on_addr {
