@@ -133,6 +133,7 @@ for my $dir ('', 'r', 'w') {
 
 	has $timer => (
 		is => 'rw',
+		init_arg => undef,
 		clearer => $clear_timer,
 	);
 
@@ -180,6 +181,7 @@ for my $dir ('', 'r', 'w') {
 	);
 	has $activity => (
 		is => 'rw',
+		init_arg => undef,
 		default => sub { AE::now },
 	);
 
