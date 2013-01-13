@@ -343,6 +343,16 @@ sub destroy {
 
 # ABSTRACT: client/server UDP handles for AnyEvent
 
+=head1 SYNOPSIS
+
+ my $echo_server = AnyEvent::Handle::UDP->new(
+     bind => ['0.0.0.0', 4000],
+     on_recv => sub {
+         my ($data, $ae_handle, $client_addr) = @_;
+         $ae_handle->push_send($data, $client_addr);
+     },
+ );
+ 
 =head1 DESCRIPTION
 
 This module is an abstraction around UDP sockets for use with AnyEvent.
@@ -363,7 +373,7 @@ The address to bind the socket to. It must be either a packed sockaddr struct or
 
 =back
 
-All are optional, though using either C<connect> or C<bind> (or both) is strongly recommended unless you give it a connected/bound C<fh>.
+All except C<on_recv> are optional, though using either C<connect> or C<bind> (or both) is strongly recommended unless you give it a connected/bound C<fh>.
 
 =attr on_recv
 
@@ -391,7 +401,7 @@ Sets the socket family. The default is C<0>, which means either IPv4 or IPv6. Th
 
 =attr fh
 
-The underlying filehandle.
+The underlying filehandle. Note that this doesn't cooperate with the C<connect> and C<bind> parameters.
 
 =attr timeout
 
