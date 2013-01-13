@@ -222,7 +222,7 @@ sub _bind_to {
 
 sub connect_to {
 	my ($self, $addr) = @_;
-	return $self->($self->fh, $addr);
+	return $self->_connect_to($self->fh, $addr);
 }
 
 sub _connect_to {
