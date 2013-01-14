@@ -2,6 +2,12 @@ Revision history for AnyEvent-Handle-UDP
 
 {{$NEXT}}
 
+0.039     2013-01-14 20:59:00 Europe/Oslo
+          Added support for the Socket SO_RCVBUF option.
+          For certain applications, this is critical to be
+          able to buffer up incoming UDP packets without
+          too much packet loss.
+
 0.038     2012-12-12 23:19:16 Europe/Amsterdam
           Fix {,r,w}timeout_reset to actually work
           Made it work with old perl+old Socket.pm
