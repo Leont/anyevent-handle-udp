@@ -11,13 +11,18 @@ use AnyEvent::Socket qw/parse_address/;
 use Carp qw/croak/;
 use Errno qw/EAGAIN EWOULDBLOCK EINTR ETIMEDOUT/;
 use Scalar::Util qw/reftype looks_like_number weaken openhandle/;
-use Socket qw/SOL_SOCKET SO_REUSEADDR SOCK_DGRAM INADDR_ANY AF_INET AF_INET6 sockaddr_family/;
+use Socket qw/SOL_SOCKET SO_RCVBUF SO_REUSEADDR SOCK_DGRAM
+              INADDR_ANY AF_INET AF_INET6 sockaddr_family/;
 use Symbol qw/gensym/;
 
 BEGIN {
 	*subname = eval { require Sub::Name } ? \&Sub::Name::subname : sub { $_[1] };
 }
 use namespace::clean;
+
+# Tweaks the receive buffer size, allowing applications
+# to buffer up incoming UDP packets, reducing packet loss
+our $RECEIVE_BUFFER_SIZE = undef;
 
 has fh => (
 	is => 'lazy',
@@ -208,7 +213,12 @@ sub _bind_to {
 			fh_nonblocking $fh, 1;
 		}
 		bind $fh, $sockaddr or $self->_error(1, "Could not bind: $!");
-		setsockopt $fh, SOL_SOCKET, SO_REUSEADDR, 1 or $self->_error($!, 1, "Couldn't set so_reuseaddr: $!");
+		setsockopt $fh, SOL_SOCKET, SO_REUSEADDR, 1
+			or $self->_error($!, 1, "Couldn't set so_reuseaddr: $!");
+		if (defined $RECEIVE_BUFFER_SIZE) {
+			setsockopt $fh, SOL_SOCKET, SO_RCVBUF, $RECEIVE_BUFFER_SIZE
+				or $self->_error($!, 1, "Couldn't set so_rcvbuf: $!");
+		}
 	};
 	if (ref $addr) {
 		my ($host, $port) = @{$addr};
@@ -444,6 +454,21 @@ Get the peer's address, per C<getpeername>.
 =method destroy
 
 Destroy the handle.
+
+=head1 TWEAKING SOCKET OPTIONS
+
+For particular applications, it's desirable to change the C<SO_RCVBUF>
+option to the UDP socket that C<AnyEvent::Handle::UDP> creates.
+This causes the OS to allocate more (or less) memory than the default,
+so it can buffer more (or less) UDP packets before dropping them.
+
+Should you want to do so, you can set the
+C<$AnyEvent::Handle::UDP::RECEIVE_BUFFER_SIZE> variable to a size
+given B<in bytes>. For example:
+
+  use AnyEvent::Handle::UDP;
+  $AnyEvent::Handle::UDP::RECEIVE_BUFFER_SIZE = 2 * 1024 * 1024;
+  # ...
 
 =head1 BACKWARDS COMPATIBILITY
 
