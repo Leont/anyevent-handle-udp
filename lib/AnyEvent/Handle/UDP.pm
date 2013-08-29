@@ -149,7 +149,8 @@ for my $dir ('', 'r', 'w') {
 		if ($after <= 0) {
 			$self->$activity($now);
 			my $time = $self->$on_timeout;
-			$time ? $time->($self) : $self->_error->(Errno::ETIMEDOUT, 0);
+			my $error = do { local $! = Errno::ETIMEDOUT; "$!" };
+			$time ? $time->($self) : $self->_error->(0, $error);
 			return if not $self->$has_timeout;
 		}
 		weaken $self;
@@ -210,7 +211,7 @@ sub _bind_to {
 			fh_nonblocking $fh, 1;
 		}
 		bind $fh, $sockaddr or $self->_error(1, "Could not bind: $!");
-		setsockopt $fh, SOL_SOCKET, SO_REUSEADDR, 1 or $self->_error($!, 1, "Couldn't set so_reuseaddr: $!");
+		setsockopt $fh, SOL_SOCKET, SO_REUSEADDR, 1 or $self->_error(1, "Couldn't set so_reuseaddr: $!");
 	};
 	if (ref $addr) {
 		my ($host, $port) = @{$addr};
@@ -260,7 +261,7 @@ sub _on_addr {
 	AnyEvent::Socket::resolve_sockaddr($host, $port, 'udp', _get_family($fh) || $self->family, SOCK_DGRAM, sub {
 		my @targets = @_;
 		while (1) {
-			my $target = shift @targets or $self->_error(1, "No such host '$host' or port '$port'");
+			my $target = shift @targets or $self->_error(1, "Could not resolve $host:$port");
 			$on_success->(@{$target});
 			last;
 		}
@@ -276,7 +277,7 @@ sub _error {
 		$self->destroy if $fatal;
 	} else {
 		$self->destroy;
-		croak "AnyEvent::Handle uncaught error: $message";
+		croak "AnyEvent::Handle::UDP uncaught error: $message";
 	}
 	return;
 }
@@ -301,7 +302,7 @@ sub push_send {
 sub _send {
 	my ($self, $message, $to, $cv) = @_;
 	my $ret = defined $to ? send $self->{fh}, $message, 0, $to : send $self->{fh}, $message, 0;
-	$self->_error(1, "$!") if not defined $ret and !$non_fatal{$! + 0};
+	$self->_error(1, "Could not send: $!") if not defined $ret and !$non_fatal{$! + 0};
 	if (defined $cv and defined $ret) {
 		$self->timeout_reset;
 		$self->wtimeout_reset;
@@ -320,7 +321,6 @@ sub _push_writer {
 				my $ret = $self->_send($msg, $to, $cv);
 				if (not defined $ret) {
 					unshift @{$self->_buffers}, $entry;
-					$self->_error->(1, "$!") if !$non_fatal{$! + 0};
 					last;
 				}
 			}
