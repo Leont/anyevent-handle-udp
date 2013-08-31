@@ -1,6 +1,7 @@
 Revision history for AnyEvent-Handle-UDP
 
 {{$NEXT}}
+          Handle address reuse better
 
 0.040     2013-08-29 13:04:30 Europe/Amsterdam
           Fix error handling in a number of places

@@ -36,11 +36,16 @@ has _connect_addr => (
 	predicate => '_has_connect_addr',
 );
 
+has reuse_addr => (
+	is => 'ro',
+	default => 1,
+);
+
 sub _build_fh {
 	my $self = shift;
 	my $ret = bless gensym(), 'IO::Socket';
-	$self->_connect_to($ret, $self->_connect_addr) if $self->_has_connect_addr;
 	$self->_bind_to($ret, $self->_bind_addr) if $self->_has_bind_addr;
+	$self->_connect_to($ret, $self->_connect_addr) if $self->_has_connect_addr;
 	return $ret;
 }
 
@@ -209,9 +214,9 @@ sub _bind_to {
 		if (!openhandle($fh)) {
 			socket $fh, $domain, $type, $proto or redo;
 			fh_nonblocking $fh, 1;
+			setsockopt $fh, SOL_SOCKET, SO_REUSEADDR, 0+$self->reuse_addr or $self->_error(1, "Couldn't set so_reuseaddr: $!");
 		}
 		bind $fh, $sockaddr or $self->_error(1, "Could not bind: $!");
-		setsockopt $fh, SOL_SOCKET, SO_REUSEADDR, 1 or $self->_error(1, "Couldn't set so_reuseaddr: $!");
 	};
 	if (ref $addr) {
 		my ($host, $port) = @{$addr};
