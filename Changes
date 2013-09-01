@@ -1,6 +1,8 @@
 Revision history for AnyEvent-Handle-UDP
 
 {{$NEXT}}
+
+0.041     2013-09-01 12:02:03 Europe/Amsterdam
           Handle address reuse better
 
 0.040     2013-08-29 13:04:30 Europe/Amsterdam
