@@ -54,6 +54,8 @@ has _reader => (
 	init_arg => undef,
 );
 
+my %non_fatal = map { ( $_ => 1 ) } EAGAIN, EWOULDBLOCK, EINTR;
+
 sub _build__reader {
 	my $self = shift;
 	return AE::io($self->fh, 0, sub {
@@ -62,7 +64,7 @@ sub _build__reader {
 			$self->rtimeout_reset;
 			$self->on_recv->($buffer, $self, $addr);
 		}
-		$self->_error(1, "Couldn't recv: $!") if $! != EAGAIN and $! != EWOULDBLOCK;
+		$self->_error(1, "Couldn't recv: $!") if not $non_fatal{$! + 0};
 		return;
 	});
 }
@@ -286,8 +288,6 @@ sub _error {
 	}
 	return;
 }
-
-my %non_fatal = map { ( $_ => 1 ) } EAGAIN, EWOULDBLOCK, EINTR;
 
 sub push_send {
 	my ($self, $message, $to, $cv) = @_;
