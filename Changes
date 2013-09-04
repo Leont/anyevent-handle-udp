@@ -1,6 +1,7 @@
 Revision history for AnyEvent-Handle-UDP
 
 {{$NEXT}}
+          Require Moo 1.001000
 
 0.041     2013-09-01 12:02:03 Europe/Amsterdam
           Handle address reuse better

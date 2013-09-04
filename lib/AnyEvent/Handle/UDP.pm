@@ -2,7 +2,7 @@ package AnyEvent::Handle::UDP;
 use strict;
 use warnings FATAL => 'all';
 
-use Moo;
+use Moo 1.001000;
 
 use AnyEvent qw//;
 use AnyEvent::Util qw/fh_nonblocking/;
