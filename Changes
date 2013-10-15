@@ -1,6 +1,8 @@
 Revision history for AnyEvent-Handle-UDP
 
 {{$NEXT}}
+
+0.043     2013-10-16 00:35:48 Europe/Amsterdam
           Rerelease for fixed compile tests
 
 0.042     2013-09-10 21:21:05 Europe/Amsterdam
