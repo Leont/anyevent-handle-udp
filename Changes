@@ -1,6 +1,7 @@
 Revision history for AnyEvent-Handle-UDP
 
 {{$NEXT}}
+          Rerelease for fixed compile tests
 
 0.042     2013-09-10 21:21:05 Europe/Amsterdam
           Require Moo 1.001000
