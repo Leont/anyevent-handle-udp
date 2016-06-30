@@ -325,7 +325,7 @@ sub _push_writer {
 				my ($msg, $to, $cv) = @{$entry};
 				my $ret = $self->_send($msg, $to, $cv);
 				if (not defined $ret) {
-					unshift @{$self->_buffers}, $entry;
+					unshift @{$self->_buffers}, $entry if $self->_buffers;
 					last;
 				}
 			}
