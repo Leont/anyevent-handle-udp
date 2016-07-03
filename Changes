@@ -1,6 +1,8 @@
 Revision history for AnyEvent-Handle-UDP
 
 {{$NEXT}}
+
+0.044     2016-07-03 22:43:46+02:00 Europe/Amsterdam
           - Avoid resending entry if object was destroyed
 
 0.043     2013-10-16 00:35:48 Europe/Amsterdam
