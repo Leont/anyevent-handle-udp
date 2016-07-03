@@ -408,6 +408,10 @@ Sets the socket family. The default is C<0>, which means either IPv4 or IPv6. Th
 
 The underlying filehandle. Note that this doesn't cooperate with the C<connect> and C<bind> parameters.
 
+=attr reuse_addr
+
+If true will enable quick reuse of the bound address
+
 =attr timeout
 
 =attr rtimeout
@@ -468,6 +472,9 @@ This module is B<not> backwards compatible in any way with the defunct previous 
 
 =for Pod::Coverage
 BUILD
+has_timeout
+has_rtimeout
+has_wtimeout
 =end
 
 =cut
