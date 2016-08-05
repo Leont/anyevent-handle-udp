@@ -2,8 +2,6 @@ package AnyEvent::Handle::UDP;
 use strict;
 use warnings FATAL => 'all';
 
-use Moo 1.001000;
-
 use AnyEvent qw//;
 use AnyEvent::Util qw/fh_nonblocking/;
 use AnyEvent::Socket qw/parse_address/;
@@ -18,195 +16,140 @@ BEGIN {
 	*subname = eval { require Sub::Name } ? \&Sub::Name::subname : sub { $_[1] };
 }
 use namespace::clean;
-
-has fh => (
-	is => 'lazy',
-	handles => [ qw/sockname peername/ ],
-);
-
-has _bind_addr => (
-	is => 'ro',
-	init_arg => 'bind',
-	predicate => '_has_bind_addr',
-);
-
-has _connect_addr => (
-	is => 'ro',
-	init_arg => 'connect',
-	predicate => '_has_connect_addr',
-);
-
-has reuse_addr => (
-	is => 'ro',
-	default => 1,
-);
-
-sub _build_fh {
-	my $self = shift;
-	my $ret = bless gensym(), 'IO::Socket';
-	$self->_bind_to($ret, $self->_bind_addr) if $self->_has_bind_addr;
-	$self->_connect_to($ret, $self->_connect_addr) if $self->_has_connect_addr;
-	return $ret;
-}
-
-has _reader => (
-	is => 'lazy',
-	init_arg => undef,
-);
-
 my %non_fatal = map { ( $_ => 1 ) } EAGAIN, EWOULDBLOCK, EINTR;
 
-sub _build__reader {
-	my $self = shift;
-	return AE::io($self->fh, 0, sub {
-		while (defined (my $addr = recv $self->fh, my ($buffer), $self->{receive_size}, 0)) {
+sub new {
+	my ($class, %args) = @_;
+	my $self = bless {
+		on_recv      => $args{on_recv} || croak('on_recv not given'),
+		reuse_addr   => exists $args{reuse_addr} ? !!$args{reuse_addr} : 1,
+		receive_size => $args{receive_size} || 1500,
+		family       => $args{family}       || 0,
+		autoflush    => $args{autoflush}    || 0,
+		buffers      => [],
+	}, $class;
+	$self->{$_} = $args{$_} for grep { exists $args{$_} } qw/on_drain on_error on_timeout on_rtimeout on_wtimeout/;
+	$self->{$_} = AE::now() for qw/activity ractivity wactivity/;
+
+	$self->{fh} = bless gensym(), 'IO::Socket';
+	$self->_bind_to($self->{fh}, $args{bind}) if exists $args{bind};
+	$self->_connect_to($self->{fh}, $args{connect}) if exists $args{connect};
+
+	$self->$_($args{$_}) for grep { exists $args{$_} } qw/timeout rtimeout wtimeout/;
+
+	$self->{reader} = AE::io($self->{fh}, 0, sub {
+		while (defined (my $addr = recv $self->{fh}, my ($buffer), $self->{receive_size}, 0)) {
 			$self->timeout_reset;
 			$self->rtimeout_reset;
-			$self->on_recv->($buffer, $self, $addr);
+			$self->{on_recv}->($buffer, $self, $addr);
 		}
 		$self->_error(1, "Couldn't recv: $!") if not $non_fatal{$! + 0};
 		return;
 	});
-}
 
-has _buffers => (
-	is => 'ro',
-	default => sub { [] },
-	init_arg => undef,
-);
-
-sub BUILD {
-	my $self = shift;
-	$self->_reader;
 	$self->_drained;
-	return;
+	return $self;
 }
 
-has on_recv => (
-	is => 'rw',
-	isa => sub { reftype($_[0]) eq 'CODE' },
-	required => 1,
-);
+sub _insert {
+	my ($name, $sub) = @_;
+	no strict 'refs';
+	*{$name} = subname $name, $sub;
+}
 
-has on_drain => (
-	is => 'rw',
-	isa => sub { reftype($_[0]) eq 'CODE' },
-	required => 0,
-	predicate => '_has_on_drain',
-	clearer => 'clear_on_drain',
-	trigger => sub {
-		my ($self, $callback) = @_;
-		$self->_drained if not @{ $self->_buffers };
-	},
-);
+for my $name (qw/on_recv on_error on_timeout on_rtimeout on_wtimeout autoflush receive_size/) {
+	_insert($name, sub {
+		my $self = shift;
+		$self->{$name} = shift if @_;
+		return $self->{$name};
+	});
+}
+
+for my $name (qw/sockname peername/) {
+	_insert($name, sub {
+		my $self = shift;
+		return $self->{fh}->$name;
+	});
+}
+
+sub on_drain {
+	my $self = shift;
+	if (@_) {
+		$self->{on_drain} = shift;
+		$self->_drained if not @{ $self->{buffers} };
+	}
+	return $self->{on_drain};
+}
 
 sub _drained {
 	my $self = shift;
-	$self->on_drain->($self) if $self->_has_on_drain
+	$self->{on_drain}->($self) if defined $self->{on_drain};
 }
-
-has on_error => (
-	is => 'rw',
-	isa => sub { reftype($_[0]) eq 'CODE' },
-	predicate => '_has_error_handler',
-);
-
-has receive_size => (
-	is => 'rw',
-	isa => sub { int $_[0] eq $_[0] },
-	default => sub { 1500 },
-);
-
-has family => (
-	is => 'ro',
-	isa => sub { int $_[0] eq $_[0] },
-	default => sub { 0 },
-);
-
-has autoflush => (
-	is => 'rw',
-	default => sub { 0 },
-);
 
 for my $dir ('', 'r', 'w') {
 	my $timeout = "${dir}timeout";
-	my $clear_timeout = "clear_$timeout";
-	my $has_timeout = "has_$timeout";
-	my $activity = "_${dir}activity";
+	my $activity = "${dir}activity";
 	my $on_timeout = "on_$timeout";
-	my $timer = "_${dir}timer";
-	my $clear_timer = "_clear$timer";
+	my $timer = "${dir}timer";
+	my $clear_timeout = "clear_$timeout";
 	my $timeout_reset = "${timeout}_reset";
-
-	has $timer => (
-		is => 'rw',
-		init_arg => undef,
-		clearer => $clear_timer,
-	);
 
 	my $callback;
 	$callback = sub {
 		my $self = shift;
-		if (not $self->$has_timeout or not $self->fh) {
-			$self->$clear_timer;
+		if (not exists $self->{$timeout} or not $self->{fh}) {
+			delete $self->{$timer};
 			return;
 		}
 		my $now = AE::now;
-		my $after = $self->$activity + $self->$timeout - $now;
+		my $after = $self->{$activity} + $self->{$timeout} - $now;
 		if ($after <= 0) {
-			$self->$activity($now);
-			my $time = $self->$on_timeout;
+			$self->{$activity} = $now;
+			my $time = $self->{$on_timeout};
 			my $error = do { local $! = Errno::ETIMEDOUT; "$!" };
 			$time ? $time->($self) : $self->_error->(0, $error);
-			return if not $self->$has_timeout;
+			return if not exists $self->{$timeout};
 		}
 		weaken $self;
 		return if not $self;
-		$self->$timer(AE::timer($after, 0, sub {
-			$self->$clear_timer;
+		$self->{$timer} = AE::timer($after, 0, sub {
+			delete $self->{$timer};
 			$callback->($self);
-		}));
+		});
 	};
 
-	has $timeout => (
-		is => 'rw',
-		isa => sub {
-			 return $_[0] >= 0;
-		},
-		predicate => $has_timeout,
-		clearer => $clear_timeout,
-		trigger => sub {
-			my ($self, $value) = @_;
+	_insert($timeout, sub {
+		my $self = shift;
+		if (@_) {
+			my $value = shift;
+			$self->{$timeout} = $value;
 			if ($value == 0) {
-				$self->$clear_timer;
-				$self->$clear_timeout;
+				delete $self->{$timer};
+				delete $self->{$timeout};
 				return;
 			}
 			else {
 				$callback->($self);
 			}
-		},
-	);
-	has $activity => (
-		is => 'rw',
-		init_arg => undef,
-		default => sub { AE::now },
-	);
+		}
+		return $self->{$timeout};
+	});
 
-	has $on_timeout => (
-		is => 'rw',
-		isa => sub { ref($_[0]) eq 'CODE' },
-	);
-	no strict 'refs';
-	*{$timeout_reset} = subname($timeout_reset, sub {
+	_insert($clear_timeout, sub {
 		my $self = shift;
-		$self->$activity(AE::now);
+		delete $self->{$timeout};
+		return;
+	});
+
+	_insert($timeout_reset, sub {
+		my $self = shift;
+		$self->{$activity} = AE::now;
 	});
 }
 
 sub bind_to {
 	my ($self, $addr) = @_;
-	return $self->_bind_to($self->fh, $addr);
+	return $self->_bind_to($self->{fh}, $addr);
 }
 
 sub _bind_to {
@@ -216,7 +159,7 @@ sub _bind_to {
 		if (!openhandle($fh)) {
 			socket $fh, $domain, $type, $proto or redo;
 			fh_nonblocking $fh, 1;
-			setsockopt $fh, SOL_SOCKET, SO_REUSEADDR, 0+$self->reuse_addr or $self->_error(1, "Couldn't set so_reuseaddr: $!");
+			setsockopt $fh, SOL_SOCKET, SO_REUSEADDR, 1 or $self->_error(1, "Couldn't set so_reuseaddr: $!") if $self->{reuse_addr};
 		}
 		bind $fh, $sockaddr or $self->_error(1, "Could not bind: $!");
 	};
@@ -232,7 +175,7 @@ sub _bind_to {
 
 sub connect_to {
 	my ($self, $addr) = @_;
-	return $self->_connect_to($self->fh, $addr);
+	return $self->_connect_to($self->{fh}, $addr);
 }
 
 sub _connect_to {
@@ -255,17 +198,17 @@ sub _connect_to {
 	return;
 }
 
-sub _get_family {
-	my $fh = shift;
-	return if !openhandle($fh) || !getsockname $fh;
+my $get_family = sub {
+	my ($self, $fh) = @_;
+	return $self->{family} if !openhandle($fh) || !getsockname $fh;
 	my $family = sockaddr_family(getsockname $fh);
-	return +($family == AF_INET) ? 4 : ($family == AF_INET6) ? 6 : 0;
-}
+	return +($family == AF_INET) ? 4 : ($family == AF_INET6) ? 6 : $self->{family};
+};
 
 sub _on_addr {
 	my ($self, $fh, $host, $port, $on_success) = @_;
 
-	AnyEvent::Socket::resolve_sockaddr($host, $port, 'udp', _get_family($fh) || $self->family, SOCK_DGRAM, sub {
+	AnyEvent::Socket::resolve_sockaddr($host, $port, 'udp', $get_family->($self, $fh), SOCK_DGRAM, sub {
 		my @targets = @_;
 		while (1) {
 			my $target = shift @targets or $self->_error(1, "Could not resolve $host:$port");
@@ -279,8 +222,8 @@ sub _on_addr {
 sub _error {
 	my ($self, $fatal, $message) = @_;
 
-	if ($self->_has_error_handler) {
-		$self->on_error->($self, $fatal, $message);
+	if (exists $self->{error_handler}) {
+		$self->{on_error}->($self, $fatal, $message);
 		$self->destroy if $fatal;
 	} else {
 		$self->destroy;
@@ -293,7 +236,7 @@ sub push_send {
 	my ($self, $message, $to, $cv) = @_;
 	$to = AnyEvent::Socket::pack_sockaddr($to->[1], defined $to->[0] ? parse_address($to->[0]) : INADDR_ANY) if ref $to;
 	$cv ||= AnyEvent::CondVar->new if defined wantarray;
-	if ($self->autoflush and ! @{ $self->_buffers }) {
+	if ($self->{autoflush} and ! @{ $self->{buffers} }) {
 		my $ret = $self->_send($message, $to, $cv);
 		$self->_push_writer($message, $to, $cv) if not defined $ret and $non_fatal{$! + 0};
 		$self->_drained if $ret;
@@ -318,14 +261,14 @@ sub _send {
 
 sub _push_writer {
 	my ($self, $message, $to, $condvar) = @_;
-	push @{$self->_buffers}, [ $message, $to, $condvar ];
+	push @{ $self->{buffers} }, [ $message, $to, $condvar ];
 	$self->{writer} ||= AE::io $self->{fh}, 1, sub {
-		if (@{ $self->_buffers }) {
-			while (my $entry = shift @{$self->_buffers}) {
+		if (@{ $self->{buffers} }) {
+			while (my $entry = shift @{ $self->{buffers} }) {
 				my ($msg, $to, $cv) = @{$entry};
 				my $ret = $self->_send($msg, $to, $cv);
 				if (not defined $ret) {
-					unshift @{$self->_buffers}, $entry if $self->_buffers;
+					unshift @{ $self->{buffers} }, $entry if $self->{buffers};
 					last;
 				}
 			}
@@ -470,11 +413,10 @@ Destroy the handle.
 
 This module is B<not> backwards compatible in any way with the defunct previous module of the same name by Jan Henning Thorsen. 
 
-=for Pod::Coverage
-BUILD
-has_timeout
-has_rtimeout
-has_wtimeout
-=end
-
 =cut
+
+=for Pod::Coverage
+clear_timeout
+clear_rtimeout
+clear_wtimeout
+=end
