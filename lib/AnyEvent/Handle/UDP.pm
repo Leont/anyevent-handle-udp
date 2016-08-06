@@ -279,9 +279,9 @@ sub _push_writer {
 			}
 		}
 		else {
-			delete $self->{writer};
 			$self->_drained;
 		}
+		delete $self->{writer} if not @{ $self->{buffers} };
 	};
 	return $condvar;
 }
