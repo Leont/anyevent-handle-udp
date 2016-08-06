@@ -288,7 +288,8 @@ sub _push_writer {
 
 sub destroy {
 	my $self = shift;
-	%{$self} = ();
+	@{$self}{qw/timer rtimer wtimer reader writer/} = ();
+	close $self->{fh};
 	return;
 }
 
