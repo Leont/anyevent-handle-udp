@@ -2,26 +2,26 @@ package AnyEvent::Handle::UDP;
 use strict;
 use warnings;
 
-use AnyEvent qw//;
-use AnyEvent::Util qw/fh_nonblocking/;
-use AnyEvent::Socket qw/parse_address/;
+use AnyEvent ();
+use AnyEvent::Util ();
+use AnyEvent::Socket ();
 
-use Carp qw/croak/;
-use Errno qw/EAGAIN EWOULDBLOCK EINTR ETIMEDOUT/;
-use Scalar::Util qw/reftype looks_like_number weaken openhandle/;
-use Socket qw/SOL_SOCKET SO_REUSEADDR SOCK_DGRAM INADDR_ANY AF_INET AF_INET6 sockaddr_family/;
-use Symbol qw/gensym/;
+use Carp ();
+use Errno ();
+use Scalar::Util ();
+use Socket ();
+use Symbol ();
 
 BEGIN {
 	*subname = eval { require Sub::Name } ? \&Sub::Name::subname : sub { $_[1] };
 }
 use namespace::clean;
-my %non_fatal = map { ( $_ => 1 ) } EAGAIN, EWOULDBLOCK, EINTR;
+my %non_fatal = map { ( $_ => 1 ) } Errno::EAGAIN, Errno::EWOULDBLOCK, Errno::EINTR;
 
 sub new {
 	my ($class, %args) = @_;
 	my $self = bless {
-		on_recv      => $args{on_recv} || croak('on_recv not given'),
+		on_recv      => $args{on_recv} || Carp::croak('on_recv not given'),
 		reuse_addr   => exists $args{reuse_addr} ? !!$args{reuse_addr} : 1,
 		receive_size => $args{receive_size} || 1500,
 		family       => $args{family}       || 0,
@@ -31,7 +31,7 @@ sub new {
 	$self->{$_} = $args{$_} for grep { exists $args{$_} } qw/on_drain on_error on_timeout on_rtimeout on_wtimeout/;
 	$self->{$_} = AE::now() for qw/activity ractivity wactivity/;
 
-	$self->{fh} = bless gensym(), 'IO::Socket';
+	$self->{fh} = bless Symbol::gensym(), 'IO::Socket';
 	$self->_bind_to($self->{fh}, $args{bind}) if exists $args{bind};
 	$self->_connect_to($self->{fh}, $args{connect}) if exists $args{connect};
 
@@ -100,7 +100,7 @@ for my $dir ('', 'r', 'w') {
 			$time ? $time->($self) : $self->_error->(0, $error);
 			return if not exists $self->{$timeout};
 		}
-		weaken $self;
+		Scalar::Util::weaken($self);
 		return if not $self;
 		$self->{$timer} = AE::timer($after, 0, sub {
 			delete $self->{$timer};
@@ -159,10 +159,10 @@ sub _bind_to {
 	my ($self, $fh, $addr) = @_;
 	my $bind_to = sub {
 		my ($domain, $type, $proto, $sockaddr) = @_;
-		if (!openhandle($fh)) {
+		if (!Scalar::Util::openhandle($fh)) {
 			socket $fh, $domain, $type, $proto or redo;
-			fh_nonblocking $fh, 1;
-			setsockopt $fh, SOL_SOCKET, SO_REUSEADDR, 1 or $self->_error(1, "Couldn't set so_reuseaddr: $!") if $self->{reuse_addr};
+			AnyEvent::Util::fh_nonblocking $fh, 1;
+			setsockopt $fh, Socket::SOL_SOCKET, Socket::SO_REUSEADDR, 1 or $self->_error(1, "Couldn't set so_reuseaddr: $!") if $self->{reuse_addr};
 			$add_reader->($self);
 		}
 		bind $fh, $sockaddr or $self->_error(1, "Could not bind: $!");
@@ -172,7 +172,7 @@ sub _bind_to {
 		_on_addr($self, $fh, $host, $port, $bind_to);
 	}
 	else {
-		$bind_to->(sockaddr_family($addr), SOCK_DGRAM, 0, $addr);
+		$bind_to->(Socket::sockaddr_family($addr), Socket::SOCK_DGRAM, 0, $addr);
 	}
 	return;
 }
@@ -186,9 +186,9 @@ sub _connect_to {
 	my ($self, $fh, $addr) = @_;
 	my $connect_to = sub {
 		my ($domain, $type, $proto, $sockaddr) = @_;
-		if (!openhandle($fh)) {
+		if (!Scalar::Util::openhandle($fh)) {
 			socket $fh, $domain, $type, $proto or redo;
-			fh_nonblocking $fh, 1;
+			AnyEvent::Util::fh_nonblocking $fh, 1;
 			$add_reader->($self);
 		}
 		connect $fh, $sockaddr or $self->_error(1, "Could not connect: $!");
@@ -198,22 +198,22 @@ sub _connect_to {
 		_on_addr($self, $fh, $host, $port, $connect_to);
 	}
 	else {
-		$connect_to->(sockaddr_family($addr), SOCK_DGRAM, 0, $addr);
+		$connect_to->(Socket::sockaddr_family($addr), Socket::SOCK_DGRAM, 0, $addr);
 	}
 	return;
 }
 
 my $get_family = sub {
 	my ($self, $fh) = @_;
-	return $self->{family} if !openhandle($fh) || !getsockname $fh;
-	my $family = sockaddr_family(getsockname $fh);
-	return +($family == AF_INET) ? 4 : ($family == AF_INET6) ? 6 : $self->{family};
+	return $self->{family} if !Scalar::Util::openhandle($fh) || !getsockname $fh;
+	my $family = Socket::sockaddr_family(getsockname $fh);
+	return +($family == Socket::AF_INET) ? 4 : ($family == Socket::AF_INET6) ? 6 : $self->{family};
 };
 
 sub _on_addr {
 	my ($self, $fh, $host, $port, $on_success) = @_;
 
-	AnyEvent::Socket::resolve_sockaddr($host, $port, 'udp', $get_family->($self, $fh), SOCK_DGRAM, sub {
+	AnyEvent::Socket::resolve_sockaddr($host, $port, 'udp', $get_family->($self, $fh), Socket::SOCK_DGRAM, sub {
 		my @targets = @_;
 		while (1) {
 			my $target = shift @targets or $self->_error(1, "Could not resolve $host:$port");
@@ -232,14 +232,14 @@ sub _error {
 		$self->destroy if $fatal;
 	} else {
 		$self->destroy;
-		croak "AnyEvent::Handle::UDP uncaught error: $message";
+		Carp::croak("AnyEvent::Handle::UDP uncaught error: $message");
 	}
 	return;
 }
 
 sub push_send {
 	my ($self, $message, $to, $cv) = @_;
-	$to = AnyEvent::Socket::pack_sockaddr($to->[1], defined $to->[0] ? parse_address($to->[0]) : INADDR_ANY) if ref $to;
+	$to = AnyEvent::Socket::pack_sockaddr($to->[1], defined $to->[0] ? AnyEvent::Socket::parse_address($to->[0]) : Socket::INADDR_ANY) if ref $to;
 	$cv ||= AnyEvent::CondVar->new if defined wantarray;
 	if ($self->{autoflush} and ! @{ $self->{buffers} }) {
 		my $ret = $self->_send($message, $to, $cv);
