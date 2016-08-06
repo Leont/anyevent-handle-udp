@@ -37,16 +37,6 @@ sub new {
 
 	$self->$_($args{$_}) for grep { exists $args{$_} } qw/timeout rtimeout wtimeout/;
 
-	$self->{reader} = AE::io($self->{fh}, 0, sub {
-		while (defined (my $addr = recv $self->{fh}, my ($buffer), $self->{receive_size}, 0)) {
-			$self->timeout_reset;
-			$self->rtimeout_reset;
-			$self->{on_recv}->($buffer, $self, $addr);
-		}
-		$self->_error(1, "Couldn't recv: $!") if not $non_fatal{$! + 0};
-		return;
-	});
-
 	$self->_drained;
 	return $self;
 }
@@ -152,6 +142,19 @@ sub bind_to {
 	return $self->_bind_to($self->{fh}, $addr);
 }
 
+my $add_reader = sub {
+	my $self = shift;
+	$self->{reader} = AE::io($self->{fh}, 0, sub {
+		while (defined (my $addr = recv $self->{fh}, my ($buffer), $self->{receive_size}, 0)) {
+			$self->timeout_reset;
+			$self->rtimeout_reset;
+			$self->{on_recv}->($buffer, $self, $addr);
+		}
+		$self->_error(1, "Couldn't recv: $!") if not $non_fatal{$! + 0};
+		return;
+	});
+};
+
 sub _bind_to {
 	my ($self, $fh, $addr) = @_;
 	my $bind_to = sub {
@@ -160,6 +163,7 @@ sub _bind_to {
 			socket $fh, $domain, $type, $proto or redo;
 			fh_nonblocking $fh, 1;
 			setsockopt $fh, SOL_SOCKET, SO_REUSEADDR, 1 or $self->_error(1, "Couldn't set so_reuseaddr: $!") if $self->{reuse_addr};
+			$add_reader->($self);
 		}
 		bind $fh, $sockaddr or $self->_error(1, "Could not bind: $!");
 	};
@@ -185,6 +189,7 @@ sub _connect_to {
 		if (!openhandle($fh)) {
 			socket $fh, $domain, $type, $proto or redo;
 			fh_nonblocking $fh, 1;
+			$add_reader->($self);
 		}
 		connect $fh, $sockaddr or $self->_error(1, "Could not connect: $!");
 	};
