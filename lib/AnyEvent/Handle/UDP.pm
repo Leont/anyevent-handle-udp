@@ -256,10 +256,10 @@ sub _send {
 	my ($self, $message, $to, $cv) = @_;
 	my $ret = defined $to ? send $self->{fh}, $message, 0, $to : send $self->{fh}, $message, 0;
 	$self->_error(1, "Could not send: $!") if not defined $ret and !$non_fatal{$! + 0};
-	if (defined $cv and defined $ret) {
+	if (defined $ret) {
 		$self->timeout_reset;
 		$self->wtimeout_reset;
-		$cv->($ret);
+		$cv->($ret) if defined $cv;
 	}
 	return $ret;
 }
