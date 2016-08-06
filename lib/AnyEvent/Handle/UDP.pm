@@ -1,6 +1,6 @@
 package AnyEvent::Handle::UDP;
 use strict;
-use warnings FATAL => 'all';
+use warnings;
 
 use AnyEvent qw//;
 use AnyEvent::Util qw/fh_nonblocking/;
