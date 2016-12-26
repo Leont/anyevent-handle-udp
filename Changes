@@ -1,6 +1,7 @@
 Revision history for AnyEvent-Handle-UDP
 
 {{$NEXT}}
+          - Move away from Moo
 
 0.044     2016-07-03 22:43:46+02:00 Europe/Amsterdam
           - Avoid resending entry if object was destroyed
