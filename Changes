@@ -1,6 +1,8 @@
 Revision history for AnyEvent-Handle-UDP
 
 {{$NEXT}}
+
+0.045     2016-12-26 19:19:16+01:00 Europe/Amsterdam
           - Move away from Moo
 
 0.044     2016-07-03 22:43:46+02:00 Europe/Amsterdam
