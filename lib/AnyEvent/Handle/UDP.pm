@@ -62,6 +62,11 @@ for my $name (qw/sockname peername/) {
 	});
 }
 
+sub fh {
+	my $self = shift;
+	return $self->{fh};
+}
+
 sub on_drain {
 	my $self = shift;
 	if (@_) {

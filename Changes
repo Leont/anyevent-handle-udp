@@ -1,6 +1,7 @@
 Revision history for AnyEvent-Handle-UDP
 
 {{$NEXT}}
+          - Restore fh method
 
 0.045     2016-12-26 19:19:16+01:00 Europe/Amsterdam
           - Move away from Moo
