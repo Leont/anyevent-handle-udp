@@ -1,6 +1,8 @@
 Revision history for AnyEvent-Handle-UDP
 
 {{$NEXT}}
+
+0.046     2017-01-08 15:39:44+01:00 Europe/Amsterdam
           - Restore fh method
 
 0.045     2016-12-26 19:19:16+01:00 Europe/Amsterdam
