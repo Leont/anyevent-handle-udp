@@ -1,6 +1,8 @@
 Revision history for AnyEvent-Handle-UDP
 
 {{$NEXT}}
+
+0.047     2017-01-11 20:58:03+01:00 Europe/Amsterdam
           - Fixed error handler
 
 0.046     2017-01-08 15:39:44+01:00 Europe/Amsterdam
