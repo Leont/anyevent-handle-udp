@@ -232,7 +232,7 @@ sub _on_addr {
 sub _error {
 	my ($self, $fatal, $message) = @_;
 
-	if (exists $self->{error_handler}) {
+	if (exists $self->{on_error}) {
 		$self->{on_error}->($self, $fatal, $message);
 		$self->destroy if $fatal;
 	} else {

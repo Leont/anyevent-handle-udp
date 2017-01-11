@@ -1,6 +1,7 @@
 Revision history for AnyEvent-Handle-UDP
 
 {{$NEXT}}
+          - Fixed error handler
 
 0.046     2017-01-08 15:39:44+01:00 Europe/Amsterdam
           - Restore fh method
