@@ -13,10 +13,7 @@ use Scalar::Util ();
 use Socket ();
 use Symbol ();
 
-BEGIN {
-	*subname = eval { require Sub::Name } ? \&Sub::Name::subname : sub { $_[1] };
-}
-use namespace::clean;
+my $subname = eval { require Sub::Name } ? \&Sub::Name::subname : sub { $_[1] };
 my %non_fatal = map { ( $_ => 1 ) } Errno::EAGAIN, Errno::EWOULDBLOCK, Errno::EINTR;
 
 sub new {
@@ -45,7 +42,7 @@ sub new {
 sub _insert {
 	my ($name, $sub) = @_;
 	no strict 'refs';
-	*{$name} = subname $name, $sub;
+	*{$name} = $subname->($name, $sub);
 }
 
 for my $name (qw/on_recv on_error on_timeout on_rtimeout on_wtimeout autoflush receive_size/) {

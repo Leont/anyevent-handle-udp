@@ -1,6 +1,7 @@
 Revision history for AnyEvent-Handle-UDP
 
 {{$NEXT}}
+          - Remove namespace::clean dependency
 
 0.048     2017-01-12 22:32:02+01:00 Europe/Amsterdam
           - Fixed timeout handling in destroy
