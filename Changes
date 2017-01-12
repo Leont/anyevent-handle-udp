@@ -1,6 +1,7 @@
 Revision history for AnyEvent-Handle-UDP
 
 {{$NEXT}}
+          - Fixed timeout handling in destroy
 
 0.047     2017-01-11 20:58:03+01:00 Europe/Amsterdam
           - Fixed error handler

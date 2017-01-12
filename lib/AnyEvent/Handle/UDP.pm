@@ -1,4 +1,5 @@
 package AnyEvent::Handle::UDP;
+
 use strict;
 use warnings;
 
@@ -293,8 +294,11 @@ sub _push_writer {
 
 sub destroy {
 	my $self = shift;
-	@{$self}{qw/timer rtimer wtimer reader writer/} = ();
+	delete @{$self}{qw/reader writer/};
 	close $self->{fh};
+	$self->timeout(0);
+	$self->rtimeout(0);
+	$self->wtimeout(0);
 	return;
 }
 
