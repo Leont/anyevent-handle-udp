@@ -166,7 +166,10 @@ sub _bind_to {
 	my $bind_to = sub {
 		my ($domain, $type, $proto, $sockaddr) = @_;
 		if (!Scalar::Util::openhandle($fh)) {
-			socket $fh, $domain, $type, $proto or redo;
+			if (!socket $fh, $domain, $type, $proto) {
+                            $self->_error(1, "Cannot open socket: $!");
+                            return;
+                        }
 			AnyEvent::Util::fh_nonblocking $fh, 1;
 			setsockopt $fh, Socket::SOL_SOCKET, Socket::SO_REUSEADDR, 1 or $self->_error(1, "Couldn't set so_reuseaddr: $!") if $self->{reuse_addr};
 			$add_reader->($self);
@@ -193,7 +196,10 @@ sub _connect_to {
 	my $connect_to = sub {
 		my ($domain, $type, $proto, $sockaddr) = @_;
 		if (!Scalar::Util::openhandle($fh)) {
-			socket $fh, $domain, $type, $proto or redo;
+			if (!socket $fh, $domain, $type, $proto) {
+                            $self->_error(1, "Cannot open socket: $!");
+                            return;
+                        }
 			AnyEvent::Util::fh_nonblocking $fh, 1;
 			$add_reader->($self);
 		}
