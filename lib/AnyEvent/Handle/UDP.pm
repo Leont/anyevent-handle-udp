@@ -21,6 +21,7 @@ sub new {
 	my $self = bless {
 		on_recv      => $args{on_recv} || Carp::croak('on_recv not given'),
 		reuse_addr   => exists $args{reuse_addr} ? !!$args{reuse_addr} : 1,
+		reuse_port   => exists $args{reuse_port} ? !!$args{reuse_port} : 0,
 		receive_size => $args{receive_size} || 1500,
 		family       => $args{family}       || 0,
 		autoflush    => $args{autoflush}    || 0,
@@ -166,6 +167,7 @@ sub _bind_to {
 			socket $fh, $domain, $type, $proto or redo;
 			AnyEvent::Util::fh_nonblocking $fh, 1;
 			setsockopt $fh, Socket::SOL_SOCKET, Socket::SO_REUSEADDR, 1 or $self->_error(1, "Couldn't set so_reuseaddr: $!") if $self->{reuse_addr};
+			setsockopt $fh, Socket::SOL_SOCKET, Socket::SO_REUSEPORT, 1 or $self->_error(1, "Couldn't set so_reuseport: $!") if $self->{reuse_port};
 			$add_reader->($self);
 		}
 		bind $fh, $sockaddr or $self->_error(1, "Could not bind: $!");
@@ -366,6 +368,10 @@ The underlying filehandle. Note that this doesn't cooperate with the C<connect> 
 =attr reuse_addr
 
 If true will enable quick reuse of the bound address
+
+=attr reuse_port
+
+If true will allow to have multiple sockets bind on the same port
 
 =attr timeout
 
