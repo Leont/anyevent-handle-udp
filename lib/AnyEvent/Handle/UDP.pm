@@ -24,6 +24,8 @@ sub new {
 		receive_size => $args{receive_size} || 1500,
 		family       => $args{family}       || 0,
 		autoflush    => $args{autoflush}    || 0,
+		on_bind      => $args{on_bind}      || sub {},
+		on_connect   => $args{on_connect}   || sub {},
 		buffers      => [],
 	}, $class;
 	$self->{$_} = $args{$_} for grep { exists $args{$_} } qw/on_drain on_error on_timeout on_rtimeout on_wtimeout/;
@@ -168,7 +170,12 @@ sub _bind_to {
 			setsockopt $fh, Socket::SOL_SOCKET, Socket::SO_REUSEADDR, 1 or $self->_error(1, "Couldn't set so_reuseaddr: $!") if $self->{reuse_addr};
 			$add_reader->($self);
 		}
-		bind $fh, $sockaddr or $self->_error(1, "Could not bind: $!");
+		if (bind $fh, $sockaddr) {
+			$self->{on_bind}->();
+		}
+		else {
+			$self->_error(1, "Could not bind: $!");
+		}
 	};
 	if (ref $addr) {
 		my ($host, $port) = @{$addr};
@@ -194,7 +201,12 @@ sub _connect_to {
 			AnyEvent::Util::fh_nonblocking $fh, 1;
 			$add_reader->($self);
 		}
-		connect $fh, $sockaddr or $self->_error(1, "Could not connect: $!");
+		if (connect $fh, $sockaddr) {
+			$self->{on_connect}->();
+		}
+		else {
+			$self->_error(1, "Could not connect: $!");
+		}
 	};
 	if (ref $addr) {
 		my ($host, $port) = @{$addr};
@@ -342,6 +354,14 @@ The callback for when a package arrives. It takes three arguments: the datagram,
 =attr on_error
 
 The callback for when an error occurs. It takes three arguments: the handle, a boolean indicating the error is fatal or not, and the error message.
+
+=attr on_bind
+
+The callback for when the bind has been performed (this may be after object construction if address lookup is involved).
+
+=attr on_connect
+
+The callback for when the connect has been performed (this may be after object construction if address lookup is involved).
 
 =attr on_drain
 
