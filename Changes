@@ -1,6 +1,7 @@
 Revision history for AnyEvent-Handle-UDP
 
 {{$NEXT}}
+          - Allow destroy to be called in on_recv callback
 
 0.049     2018-05-16 23:53:00+02:00 Europe/Amsterdam
           - Remove namespace::clean dependency

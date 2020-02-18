@@ -148,7 +148,7 @@ sub bind_to {
 my $add_reader = sub {
 	my $self = shift;
 	$self->{reader} = AE::io($self->{fh}, 0, sub {
-		while (defined (my $addr = recv $self->{fh}, my ($buffer), $self->{receive_size}, 0)) {
+		while (exists $self->{reader} and defined (my $addr = recv $self->{fh}, my ($buffer), $self->{receive_size}, 0)) {
 			$self->timeout_reset;
 			$self->rtimeout_reset;
 			$self->{on_recv}->($buffer, $self, $addr);
