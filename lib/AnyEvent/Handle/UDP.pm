@@ -165,16 +165,16 @@ sub _bind_to {
 	my $bind_to = sub {
 		my ($domain, $type, $proto, $sockaddr) = @_;
 		if (!Scalar::Util::openhandle($fh)) {
-			socket $fh, $domain, $type, $proto or redo;
+			socket $fh, $domain, $type, $proto or die "Could not create socket: $!";
 			AnyEvent::Util::fh_nonblocking $fh, 1;
-			setsockopt $fh, Socket::SOL_SOCKET, Socket::SO_REUSEADDR, 1 or $self->_error(1, "Couldn't set so_reuseaddr: $!") if $self->{reuse_addr};
+			setsockopt $fh, Socket::SOL_SOCKET, Socket::SO_REUSEADDR, 1 or die "Couldn't set so_reuseaddr: $!" if $self->{reuse_addr};
 			$add_reader->($self);
 		}
 		if (bind $fh, $sockaddr) {
 			$self->{on_bind}->();
 		}
 		else {
-			$self->_error(1, "Could not bind: $!");
+			die "Could not bind: $!";
 		}
 	};
 	if (ref $addr) {
@@ -182,7 +182,8 @@ sub _bind_to {
 		_on_addr($self, $fh, $host, $port, $bind_to);
 	}
 	else {
-		$bind_to->(Socket::sockaddr_family($addr), Socket::SOCK_DGRAM, 0, $addr);
+		eval { $bind_to->(Socket::sockaddr_family($addr), Socket::SOCK_DGRAM, 0, $addr); 1 }
+			or $self->_error(1, $@);
 	}
 	return;
 }
@@ -197,7 +198,7 @@ sub _connect_to {
 	my $connect_to = sub {
 		my ($domain, $type, $proto, $sockaddr) = @_;
 		if (!Scalar::Util::openhandle($fh)) {
-			socket $fh, $domain, $type, $proto or redo;
+			socket $fh, $domain, $type, $proto or die "Could not create socket: $!";
 			AnyEvent::Util::fh_nonblocking $fh, 1;
 			$add_reader->($self);
 		}
@@ -205,7 +206,7 @@ sub _connect_to {
 			$self->{on_connect}->();
 		}
 		else {
-			$self->_error(1, "Could not connect: $!");
+			die "Could not connect: $!";
 		}
 	};
 	if (ref $addr) {
@@ -213,7 +214,8 @@ sub _connect_to {
 		_on_addr($self, $fh, $host, $port, $connect_to);
 	}
 	else {
-		$connect_to->(Socket::sockaddr_family($addr), Socket::SOCK_DGRAM, 0, $addr);
+		eval { $connect_to->(Socket::sockaddr_family($addr), Socket::SOCK_DGRAM, 0, $addr); 1 }
+			or $self->_error(1, $@);
 	}
 	return;
 }
@@ -230,11 +232,11 @@ sub _on_addr {
 
 	AnyEvent::Socket::resolve_sockaddr($host, $port, 'udp', $get_family->($self, $fh), Socket::SOCK_DGRAM, sub {
 		my @targets = @_;
-		while (1) {
-			my $target = shift @targets or $self->_error(1, "Could not resolve $host:$port");
-			$on_success->(@{$target});
-			last;
+		while (@targets) {
+			my $target = shift @targets;
+			eval { $on_success->(@{$target}); 1 } and return;
 		}
+		$self->_error(1, "Could not resolve $host:$port")
 	});
 	return;
 }
