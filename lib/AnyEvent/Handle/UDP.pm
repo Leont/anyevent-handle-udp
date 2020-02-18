@@ -26,12 +26,12 @@ sub new {
 		autoflush    => $args{autoflush}    || 0,
 		on_bind      => $args{on_bind}      || sub {},
 		on_connect   => $args{on_connect}   || sub {},
+		fh           => $args{fh}           || bless(Symbol::gensym(), 'IO::Socket'),
 		buffers      => [],
 	}, $class;
 	$self->{$_} = $args{$_} for grep { exists $args{$_} } qw/on_drain on_error on_timeout on_rtimeout on_wtimeout/;
 	$self->{$_} = AE::now() for qw/activity ractivity wactivity/;
 
-	$self->{fh} = bless Symbol::gensym(), 'IO::Socket';
 	$self->_bind_to($self->{fh}, $args{bind}) if exists $args{bind};
 	$self->_connect_to($self->{fh}, $args{connect}) if exists $args{connect};
 
