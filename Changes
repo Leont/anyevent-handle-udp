@@ -2,6 +2,7 @@ Revision history for AnyEvent-Handle-UDP
 
 {{$NEXT}}
           - Add on_bind and on_connect callbacks
+          - Allow injecting the socket into the handle
           - Allow destroy to be called in on_recv callback
           - Fix error handling in address lookup
 
