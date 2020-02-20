@@ -102,7 +102,7 @@ for my $dir ('', 'r', 'w') {
 			$self->{$activity} = $now;
 			my $time = $self->{$on_timeout};
 			my $error = do { local $! = Errno::ETIMEDOUT; "$!" };
-			$time ? $time->($self) : $self->_error->(0, $error);
+			$time ? $time->($self) : $self->_error(0, $error);
 			return if not exists $self->{$timeout};
 		}
 		Scalar::Util::weaken($self);
