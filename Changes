@@ -1,6 +1,8 @@
 Revision history for AnyEvent-Handle-UDP
 
 {{$NEXT}}
+
+0.050     2020-03-26 23:05:21+01:00 Europe/Amsterdam
           - Add on_bind and on_connect callbacks
           - Allow injecting the socket into the handle
           - Allow destroy to be called in on_recv callback
