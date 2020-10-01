@@ -203,7 +203,7 @@ sub _connect_to {
 			$add_reader->($self);
 		}
 		if (connect $fh, $sockaddr) {
-			$self->{on_connect}->();
+			$self->{on_connect}->($self, $addr);
 		}
 		else {
 			die "Could not connect: $!";
