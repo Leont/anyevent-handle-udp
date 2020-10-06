@@ -171,7 +171,7 @@ sub _bind_to {
 			$add_reader->($self);
 		}
 		if (bind $fh, $sockaddr) {
-			$self->{on_bind}->();
+			$self->{on_bind}->($self, $addr);
 		}
 		else {
 			die "Could not bind: $!";
